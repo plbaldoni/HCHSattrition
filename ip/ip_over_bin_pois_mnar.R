@@ -9,15 +9,15 @@ cts <- 1
 library(survey)
 library(data.table)
 
-dirdata = '/pine/scr/b/a/baldoni/Cai/Visit2/Manuscript_MissingData/Data/NRW_Apr2020/'
-dirwts = '/pine/scr/b/a/baldoni/Cai/Visit2/Manuscript_MissingData/Data/IPW_Overspec_Apr2020/'
+dirdata = '/pine/scr/b/a/baldoni/Cai/Visit2/Manuscript_MissingData/Data/IPW/'
+dirwts = '/pine/scr/b/a/baldoni/Cai/Visit2/Manuscript_MissingData/Data/IPW_Overspec/'
 dirwork = '/pine/scr/b/a/baldoni/Cai/Visit2/Manuscript_MissingData/Codes/'
 diroutp = '/pine/scr/b/a/baldoni/Cai/Visit2/Manuscript_MissingData/Output/'
 
 setwd(dirwork)
 
-files = paste0(dirdata,'widewt_samp_mar2017_',1:nsim,'.csv')
-files.wts = paste0(dirwts,'widewt_samp_mar2017_ipwtsfullbin_',1:nsim,'.csv')
+files = paste0(dirdata,'widewt_samp_mar2017_ip_',1:nsim,'.csv')
+files.wts = paste0(dirwts,'widewt_samp_mar2017_ipwtsfull_',1:nsim,'.csv')
 
 foo = function(miss,vers,cut,misspct,seed){
     label = paste0('bin_pois_',cut,'_',miss)
@@ -65,11 +65,11 @@ foo = function(miss,vers,cut,misspct,seed){
             
             ### Analyzing data ###
             design = svydesign(id=~BGid, strata=~strat, weights=~wts, data=subdat)
-            model = svyglm(response~x8+x12+x13+x14+age_base+offset(log(x6imp)),subset=(baseline==0),
+            model = svyglm(response~x13+x15+offset(log(x6imp)),subset=(baseline==0),
                            family=quasipoisson(link = "log"),design=design)
             
             df[[cts]] = data.frame(sim=simnum,missing=misspct[j],
-                                   par=c('Int','x8','x12','x13','x14','age_base'),
+                                   par=c('Int','x13','x15'),
                                    results=model$coefficients,se=sqrt(diag(model$cov.unscaled)),
                                    X.lower=confint(model)[,1],upper.=confint(model)[,2],missInfo='0')
             cts <- cts + 1
