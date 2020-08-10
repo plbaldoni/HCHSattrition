@@ -5,17 +5,18 @@ seed = 100217
 namefile = 'mar.bin.pois.ip.RData'
 nsim = 1000
 
-library(mice)
-library(mitools)
 library(survey)
+library(data.table)
 
-dirdata = '/netscr/baldoni/Cai/Data_aug2017/IPW/'
-dirwork = '/netscr/baldoni/Cai/Codes_aug2017/Y_missing/'
-diroutp = '/netscr/baldoni/Cai/Output_aug2017/Y_missing/'
+dirdata = '/pine/scr/b/a/baldoni/Cai/Visit2/Manuscript_MissingData/Data/IPW/'
+dirwts = '/pine/scr/b/a/baldoni/Cai/Visit2/Manuscript_MissingData/Data/IPW_Correct/'
+dirwork = '/pine/scr/b/a/baldoni/Cai/Visit2/Manuscript_MissingData/Codes/'
+diroutp = '/pine/scr/b/a/baldoni/Cai/Visit2/Manuscript_MissingData/Output/'
 
 setwd(dirwork)
 
 files = paste0(dirdata,'widewt_samp_mar2017_ip_',1:nsim,'.csv')
+files.wts = paste0(dirwts,'widewt_samp_mar2017_ipwtscorrect_',1:nsim,'.csv')
 
 foo = function(miss,vers,cut,misspct,seed){
   label = paste0('bin_pois_',cut,'_',miss)
@@ -27,7 +28,8 @@ foo = function(miss,vers,cut,misspct,seed){
   allcomp = paste0('allcomp_',misspct)
   
   for(i in 1:length(files)){
-    dat = read.csv(file=files[i],header=T)
+    dat = fread(file=files[i],header=T)
+    dat.wts = fread(file=files.wts[i],header=T)
     
     simnum = i
     cat(simnum)
@@ -45,10 +47,11 @@ foo = function(miss,vers,cut,misspct,seed){
       dat.anal[[allcomp[j]]] = ifelse(dat.anal[[ymiss[j]]]==0,1,0)
 
       ### Running Multiple Imputation
-      subvar = c('strat','BGid','subid',paste0('W_ip_',miss,vers,'_',misspct[j]),'strat1','strat2','strat3','strat4',
-                 'x12','x13','age_base',paste0('y1_bin_gfr_',cut,'_v3'),
-                 'x14','x8',timp[j],yimp[j])
+      subvar = c('strat','BGid','subid','strat1','strat2','strat3','strat4',
+                 'x13','x15',paste0('y1_bin_gfr_',cut,'_v3'),
+                 timp[j],yimp[j])
       subdat = subset(dat.anal,select=subvar)
+      subdat = merge(x=subdat,y=subset(dat.wts,select=c('subid',paste0('W_ip_',miss,vers,'_',misspct[j]))),by='subid',all.x=T)
       
       subdat$response = subdat[[yimp[j]]]
       subdat$baseline = subdat[[paste0('y1_bin_gfr_',cut,'_v3')]]
@@ -57,11 +60,11 @@ foo = function(miss,vers,cut,misspct,seed){
     
       ### Analyzing data ###
       design = svydesign(id=~BGid, strata=~strat, weights=~wts, data=subdat)
-      model = svyglm(response~x8+x12+x13+x14+age_base+offset(log(x6imp)),subset=(baseline==0),
+      model = svyglm(response~x13+x15+offset(log(x6imp)),subset=(baseline==0),
                      family=quasipoisson(link = "log"),design=design)
       
       df = rbind(df,data.frame(sim=simnum,missing=misspct[j],
-                               par=c('Int','x8','x12','x13','x14','age_base'),
+                               par=c('Int','x13','x15'),
                                results=model$coefficients,se=sqrt(diag(model$cov.unscaled)),
                                X.lower=confint(model)[,1],upper.=confint(model)[,2],missInfo='0'))
     }
