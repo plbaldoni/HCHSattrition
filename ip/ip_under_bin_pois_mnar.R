@@ -5,8 +5,6 @@ seed = 100217
 namefile = 'mnar.under.bin.pois.ip.RData'
 nsim = 1000
 
-library(mice)
-library(mitools)
 library(survey)
 library(data.table)
 
@@ -18,7 +16,7 @@ diroutp = '/pine/scr/b/a/baldoni/Cai/Visit2/Manuscript_MissingData/Output/'
 setwd(dirwork)
 
 files = paste0(dirdata,'widewt_samp_mar2017_ip_',1:nsim,'.csv')
-files.wts = paste0(dirwts,'widewt_samp_mar2017_ip_',1:nsim,'.csv')
+files.wts = paste0(dirwts,'widewt_samp_mar2017_ipwtsmis_',1:nsim,'.csv')
 
 foo = function(miss,vers,cut,misspct,seed){
   label = paste0('bin_pois_',cut,'_',miss)
@@ -50,7 +48,7 @@ foo = function(miss,vers,cut,misspct,seed){
       
       ### Running Multiple Imputation
       subvar = c('strat','BGid','subid','strat1','strat2','strat3','strat4',
-                 'x12','x13','age_base',paste0('y1_bin_gfr_',cut,'_v3'),
+                 'x12','x13','x15','age_base',paste0('y1_bin_gfr_',cut,'_v3'),
                  'x14','x8',timp[j],yimp[j],allcomp[j])
       subdat = subset(dat.anal,select=subvar)
       subdat = merge(x=subdat,y=subset(dat.wts,select=c('subid',paste0('W_ip_',miss,'_gfr_',cut,vers,'_',misspct[j]))),by='subid',all.x=T)
@@ -62,11 +60,11 @@ foo = function(miss,vers,cut,misspct,seed){
       
       ### Analyzing data ###
       design = svydesign(id=~BGid, strata=~strat, weights=~wts, data=subdat)
-      model = svyglm(response~x8+x12+x13+x14+age_base+offset(log(x6imp)),subset=(baseline==0),
+      model = svyglm(response~x13+x15+offset(log(x6imp)),subset=(baseline==0),
                      family=quasipoisson(link = "log"),design=design)
       
       df = rbind(df,data.frame(sim=simnum,missing=misspct[j],
-                               par=c('Int','x8','x12','x13','x14','age_base'),
+                               par=c('Int','x13','x15'),
                                results=model$coefficients,se=sqrt(diag(model$cov.unscaled)),
                                X.lower=confint(model)[,1],upper.=confint(model)[,2],missInfo='0'))
       }

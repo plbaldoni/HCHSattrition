@@ -5,19 +5,18 @@ seed = 100217
 namefile = 'mar.under.bin.pois.ip.RData'
 nsim = 1000
 
-library(mice)
-library(mitools)
 library(survey)
+library(data.table)
 
-dirdata = '/netscr/baldoni/Cai/Data_aug2017/IPW/'
-dirwts = '/netscr/baldoni/Cai/Data_aug2017/IPW_Underspec/'
-dirwork = '/netscr/baldoni/Cai/Codes_aug2017/Y_missing/'
-diroutp = '/netscr/baldoni/Cai/Output_aug2017/Y_missing/'
+dirdata = '/pine/scr/b/a/baldoni/Cai/Visit2/Manuscript_MissingData/Data/IPW/'
+dirwts = '/pine/scr/b/a/baldoni/Cai/Visit2/Manuscript_MissingData/Data/IPW_Underspec/'
+dirwork = '/pine/scr/b/a/baldoni/Cai/Visit2/Manuscript_MissingData/Codes/'
+diroutp = '/pine/scr/b/a/baldoni/Cai/Visit2/Manuscript_MissingData/Output/'
 
 setwd(dirwork)
 
 files = paste0(dirdata,'widewt_samp_mar2017_ip_',1:nsim,'.csv')
-files.wts = paste0(dirwts,'widewt_samp_mar2017_ip_',1:nsim,'.csv')
+files.wts = paste0(dirwts,'widewt_samp_mar2017_ipwtsmis_',1:nsim,'.csv')
 
 foo = function(miss,vers,cut,misspct,seed){
   label = paste0('bin_pois_',cut,'_',miss)
@@ -49,7 +48,7 @@ foo = function(miss,vers,cut,misspct,seed){
 
       ### Running Multiple Imputation
       subvar = c('BGid','strat','bghhsub_s2','subid', #Design variables
-                 'strat1','strat2','strat3','age_base','x2','x8','x12','x13','x14', #Variables that Poulami is using in her 'Under'-specified models
+                 'strat1','strat2','strat3','age_base','x2','x8','x12','x13','x14','x15', #Variables that Poulami is using in her 'Under'-specified models
                  timp[j],yimp[j], #Missing variables
                  paste0('y1_bin_gfr_',cut,'_v3'))
       subdat = subset(dat.anal,select=subvar)
@@ -62,11 +61,11 @@ foo = function(miss,vers,cut,misspct,seed){
     
       ### Analyzing data ###
       design = svydesign(id=~BGid, strata=~strat, weights=~wts, data=subdat)
-      model = svyglm(response~x8+x12+x13+x14+age_base+offset(log(x6imp)),subset=(baseline==0),
+      model = svyglm(response~x13+x15+offset(log(x6imp)),subset=(baseline==0),
                      family=quasipoisson(link = "log"),design=design)
       
       df = rbind(df,data.frame(sim=simnum,missing=misspct[j],
-                               par=c('Int','x8','x12','x13','x14','age_base'),
+                               par=c('Int','x13','x15'),
                                results=model$coefficients,se=sqrt(diag(model$cov.unscaled)),
                                X.lower=confint(model)[,1],upper.=confint(model)[,2],missInfo='0'))
     }
